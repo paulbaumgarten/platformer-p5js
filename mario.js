@@ -30,6 +30,7 @@ let PLAYER_Y = 13;                  // Block location of the player - y
 let PLAYER_ACTION = 0; // 0 = still, +1 = left, +2 = right, +4 = jump
 let PLAYER_JUMP = 0;
 let POINTS = 0;
+let HEALTH = 3;
 let PART_X = 0;
 
 function preload() { // Load all the media files
@@ -37,7 +38,7 @@ function preload() { // Load all the media files
     FONT = loadFont('assets/Roboto-Light.ttf');
     BOX = loadImage("assets/items/box.png");
     COIN = loadImage("assets/items/coinGold.png");
-    OUCH = loadImage("assets/items/dirtCaveBottom.png");
+    OUCH = loadImage("assets/items/spikes.png");
     P_STILL = loadImage("assets/player/p1_stand.png")
     P_LEFT = loadImage("assets/player/p1_walk.gif")
     P_RIGHT = loadImage("assets/player/p1_walk.gif")
@@ -116,9 +117,15 @@ function play_game() { // 1/25th of a second
         LEVEL[PLAYER_Y][PLAYER_X] = '.';
         POINTS += 10;
     } else if (PLAYER_Y>1 && LEVEL[PLAYER_Y-1][PLAYER_X] == 'o') {
-        console.log("COIN");
         LEVEL[PLAYER_Y-1][PLAYER_X] = '.';
         POINTS += 10;
+    }
+
+    // Ouch
+    if (LEVEL[PLAYER_Y][PLAYER_X] == '|') {
+        HEALTH -= 1;
+    } else if (PLAYER_Y<BLOCKS_PER_LEVEL_H && LEVEL[PLAYER_Y+1][PLAYER_X] == '|') {
+        HEALTH -= 1;
     }
 
     // Draw scene
@@ -129,8 +136,8 @@ function play_game() { // 1/25th of a second
     let left_edge_block = PLAYER_X - PLAYER_OFFSET_X;
     let top_edge_block = PLAYER_Y - PLAYER_OFFSET_Y; 
     // Iterate over all the blocks in the view port
-    for (let y=0; y<BLOCKS_PER_SCREEN_H; y++) {
-        for (let x=0; x<BLOCKS_PER_SCREEN_W; x++) {
+    for (let y=-1; y<=BLOCKS_PER_SCREEN_H; y++) {
+        for (let x=-1; x<=BLOCKS_PER_SCREEN_W; x++) {
             // What block to draw at this x,y block?
             let block = 'W'; // default to a "wall" block in case we are asking for a block outside of bounds
             // If we are requesting a location within the level
