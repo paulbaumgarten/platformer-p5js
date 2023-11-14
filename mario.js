@@ -11,18 +11,23 @@ let P_STILL, P_LEFT, P_RIGHT;
 let BOX, COIN, OUCH;
 let LEVEL;
 // Screen viewing variables
-let VIEW_X = 2;         // Starting block location of viewport
-let VIEW_Y = 18;        // Starting block location of viewport
-let VIEW_W = 8;         // Will be updated based on screen dimensions to reflect BLOCK_W
-let VIEW_H = 16;        // Will be updated based on screen dimensions to reflect BLOCK_H
-let BLOCK_W = 48;       // Pixel width per block
-let BLOCK_H = 48;       // Pixel height per block
+const PLAYER_OFFSET_X = 4;         // Left edge of view port relative to player
+const PLAYER_OFFSET_Y = 11;        // Top edge of view port relative to player
+const PIXELS_PER_BLOCK_W = 48;       // Pixel width per block
+const PIXELS_PER_BLOCK_H = 48;       // Pixel height per block
+const BLOCKS_PER_LEVEL_H = 41;    // Number of blocks in the level - height
+const BLOCKS_PER_LEVEL_W = 162;   // Number of blocks in the level - width
+// Update once we know the screen dimensions
+let BLOCKS_PER_SCREEN_W = 8;         // Number of blocks per view screen - width
+let BLOCKS_PER_SCREEN_H = 16;        // Number of blocks per view screen - height
 // Player
-let PLAYING = false;
-let X = 28 ;
-let Y = 0;
-let DIRECTION = "still";
-let P_MODE = "still";
+let PLAYING = false;                // Has the game started ?
+let SPRITE_X = -1;                  // Pixel location to draw the player sprite - x               
+let SPRITE_Y = -1;                  // Pixel location to draw the player sprite - y
+let PLAYER_X = 2;                   // Block location of the player - x
+let PLAYER_Y = 13;                  // Block location of the player - y
+let PLAYER_ACTION = 0; // 0 = still, +1 = left, +2 = right, +4 = jump
+let PLAYER_JUMP = 0;
 
 function preload() { // Load all the media files
     BACKGROUND = loadImage('assets/items/bg_grasslands.png');
@@ -37,17 +42,18 @@ function preload() { // Load all the media files
 }
 
 function setup() {
+    frameRate(25);
     createCanvas(windowWidth, windowHeight);
     BACKGROUND.resize((windowHeight/windowWidth)*768, windowHeight);
-    VIEW_W = windowWidth/BLOCK_W;
-    VIEW_H = windowHeight/BLOCK_H;
-    console.log("Screen resolution is ",windowWidth,"x",windowHeight,".");
-    console.log("Block size is ",BLOCK_W,"x",BLOCK_H,".");
-    console.log("Blocks in a view port are ",VIEW_W," wide, ",VIEW_H," high.");
+    // Update these global variables
+    BLOCKS_PER_SCREEN_W = windowWidth/PIXELS_PER_BLOCK_W;
+    BLOCKS_PER_SCREEN_H = windowHeight/PIXELS_PER_BLOCK_H;
+    SPRITE_X = PLAYER_OFFSET_X*PIXELS_PER_BLOCK_W - 0.5*PIXELS_PER_BLOCK_W - 0.5*P_STILL.width;
+    SPRITE_Y = PLAYER_OFFSET_Y*PIXELS_PER_BLOCK_H - P_STILL.height;
 
-    X = windowWidth/2 - P_STILL.width/2;
-    Y = windowHeight - 2*BLOCK_H - P_STILL.height;
-    frameRate(25);
+    console.log("Screen resolution is ",windowWidth,"x",windowHeight,".");
+    console.log("Block size is ",PIXELS_PER_BLOCK_W,"x",PIXELS_PER_BLOCK_H,".");
+    console.log("Blocks in a view port are ",BLOCKS_PER_SCREEN_W," wide, ",BLOCKS_PER_SCREEN_H," high.");
 }
 
 function is_collision(im1,x1,y1, im2,x2,y2) {
@@ -59,50 +65,94 @@ function is_collision(im1,x1,y1, im2,x2,y2) {
 }
 
 function play_game() { // 1/25th of a second
-    console.log("Playing game",X,Y,"VIEW_X",VIEW_X,"VIEW_Y",VIEW_Y,"VIEW_W",VIEW_W,"VIEW_H",VIEW_H,"BLOCK_W",BLOCK_W,"LEVEL.length",LEVEL.length,"LEVEL[0].length",LEVEL[0].length);
+    // Respond to player input
+    if (mousePressed) {
+        PLAYER_ACTION = 0; // default, do nothing
+        for (let i=0; i<touches.length; i++) {
+            //console.log("PLAYER_XY",PLAYER_X,PLAYER_Y);
+            if (touches[i].x < windowWidth/3) { // left third
+                PLAYER_ACTION = 1;
+                if ((PLAYER_X-1 > 0) && ((LEVEL[PLAYER_Y-1][PLAYER_X-1] != "#") && (LEVEL[PLAYER_Y-1][PLAYER_X-1] != "W"))) {
+                    PLAYER_X--;
+                }
+            } else if (touches[i].x > windowWidth*2/3) { // right third
+                PLAYER_ACTION = 2;
+                if ((PLAYER_X < BLOCKS_PER_LEVEL_W) && ((LEVEL[PLAYER_Y-1][PLAYER_X] != "#") && (LEVEL[PLAYER_Y-1][PLAYER_X] != "W"))) {
+                    PLAYER_X++;
+                }
+            } else { // middle third
+                // If we are standing on solid ground, jump
+                if ((PLAYER_Y == BLOCKS_PER_LEVEL_H) || (LEVEL[PLAYER_Y][PLAYER_X] == "#")) {
+                    PLAYER_JUMP = 10;
+                }
+            }    
+        }
+    }
+
+    // Are we jumping or falling?
+    if (PLAYER_JUMP > 0) { // Jumping
+        console.log("Jumping")
+        PLAYER_Y--;
+        PLAYER_JUMP--;
+    } else if (PLAYER_Y < BLOCKS_PER_LEVEL_H && LEVEL[PLAYER_Y][PLAYER_X] != "#") { // Falling
+        PLAYER_Y++;
+        console.log("Falling")
+    }
     // Draw scene
     image(BACKGROUND, 0,0);
-    //console.log("Viewport range is horizontal ",VIEW_X," to ",VIEW_X+VIEW_W," vertical ",VIEW_Y," to ",VIEW_Y+VIEW_H)
-    for (let y=VIEW_Y; y<(VIEW_Y+VIEW_H); y++) {
-        for (let x=VIEW_X; x<(VIEW_X+VIEW_W); x++) {
-            let block = 'W';
-            if (y >= 0 && x >= 0 && y < LEVEL.length && x < LEVEL[y].length) {
-                block = LEVEL[y][x];
+
+    let left_edge_block = PLAYER_X - PLAYER_OFFSET_X;
+    let top_edge_block = PLAYER_Y - PLAYER_OFFSET_Y 
+    // Iterate over all the blocks in the view port
+    for (let y=0; y<BLOCKS_PER_SCREEN_H; y++) {
+        for (let x=0; x<BLOCKS_PER_SCREEN_W; x++) {
+            // What block to draw at this x,y block?
+            let block = 'W'; // default to a "wall" block in case we are asking for a block outside of bounds
+            // If we are requesting a location within the level
+            if (top_edge_block+y >= 0 && left_edge_block+x >= 0 && top_edge_block+y < BLOCKS_PER_LEVEL_H && left_edge_block+x < BLOCKS_PER_LEVEL_W) {
+                block = LEVEL[top_edge_block+y][left_edge_block+x];
             }
             //console.log("Drawing ".block," at ",x,y,(x-VIEW_X)*BLOCK_W, y*BLOCK_H)
             switch (block) {
                 case '#': 
-                    image(BOX, (x-VIEW_X)*BLOCK_W, (y-VIEW_Y)*BLOCK_H, BLOCK_W, BLOCK_H);
+                    image(BOX, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case 'W': 
-                    image(BOX, (x-VIEW_X)*BLOCK_W, (y-VIEW_Y)*BLOCK_H, BLOCK_W, BLOCK_H);
+                    image(BOX, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case 'o': 
-                    image(COIN, (x-VIEW_X)*BLOCK_W, (y-VIEW_Y)*BLOCK_H, BLOCK_W, BLOCK_H);
+                    image(COIN, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case '|': 
-                    image(OUCH, (x-VIEW_X)*BLOCK_W, (y-VIEW_Y)*BLOCK_H, BLOCK_W, BLOCK_H);
+                    image(OUCH, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
             }                    
         }
     }
+
     // Player sprite
-    if (P_MODE == "left") {
-        image(P_STILL, X, Y);
-    } else if (P_MODE == "right") {
-        image(P_STILL, X, Y);
+    if (PLAYER_ACTION % 10 == 1) { // left
+        image(P_LEFT, SPRITE_X, SPRITE_Y);
+    } else if (PLAYER_ACTION % 10 == 2) { // right
+        image(P_RIGHT, SPRITE_X, SPRITE_Y);
     } else {
-        image(P_STILL, X, Y);
+        image(P_STILL, SPRITE_X, SPRITE_Y);
     }
 }
 
 function keyPressed() {
     switch (keyCode) {
-        case (UP_ARROW): VIEW_Y--; break;
-        case (DOWN_ARROW): VIEW_Y++; break;
-        case (LEFT_ARROW): VIEW_X--; break;
-        case (RIGHT_ARROW): VIEW_X++; break;
+        case (UP_ARROW): PLAYER_Y--; break;
+        case (DOWN_ARROW): PLAYER_Y++; break;
+        case (LEFT_ARROW): PLAYER_X--; break;
+        case (RIGHT_ARROW): PLAYER_X++; break;
     }
+}
+
+function mousePressed() {
+    if (touches) { console.log(touches); } else { console.log('no touch');}
+    console.log("mouseXY",mouseX,mouseY);
+    // If the game has not yet started
 }
 
 function intro_screen() {
@@ -112,10 +162,6 @@ function intro_screen() {
     fill(255);
     text('My amazing game', windowWidth/2, windowHeight/3);
     text('Click to start', windowWidth/2, windowHeight*5/6);
-    if (mouseIsPressed) {
-        PLAYING = true;
-        //fullscreen(true);
-    }
 }
 
 function draw() { // main game loop
@@ -123,5 +169,8 @@ function draw() { // main game loop
         play_game();
     } else {
         intro_screen();
+        if (mousePressed) {
+            PLAYING = true;
+        }
     }
 }
