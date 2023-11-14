@@ -91,12 +91,14 @@ function play_game() { // 1/25th of a second
 
     // Are we jumping or falling?
     if (PLAYER_JUMP > 0) { // Jumping
-        console.log("Jumping")
-        PLAYER_Y--;
-        PLAYER_JUMP--;
+        if (frameCount % 3 == 0) {
+            PLAYER_Y--;
+            PLAYER_JUMP--;
+        }
     } else if (PLAYER_Y < BLOCKS_PER_LEVEL_H && LEVEL[PLAYER_Y][PLAYER_X] != "#") { // Falling
-        PLAYER_Y++;
-        console.log("Falling")
+        if (frameCount % 2 == 0) {
+            PLAYER_Y++;
+        }
     }
     // Draw scene
     image(BACKGROUND, 0,0);
