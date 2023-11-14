@@ -42,7 +42,7 @@ function preload() { // Load all the media files
 }
 
 function setup() {
-    frameRate(12);
+    frameRate(10);
     createCanvas(windowWidth, windowHeight);
     BACKGROUND.resize((windowHeight/windowWidth)*768, windowHeight);
     // Update these global variables
@@ -73,12 +73,12 @@ function play_game() { // 1/25th of a second
             if (touches[i].x < windowWidth/3) { // left third
                 PLAYER_ACTION = 1;
                 if ((PLAYER_X-1 > 0) && ((LEVEL[PLAYER_Y-1][PLAYER_X-1] != "#") && (LEVEL[PLAYER_Y-1][PLAYER_X-1] != "W"))) {
-                    PLAYER_X--;
+                    PLAYER_X += 1;
                 }
             } else if (touches[i].x > windowWidth*2/3) { // right third
                 PLAYER_ACTION = 2;
                 if ((PLAYER_X < BLOCKS_PER_LEVEL_W) && ((LEVEL[PLAYER_Y-1][PLAYER_X] != "#") && (LEVEL[PLAYER_Y-1][PLAYER_X] != "W"))) {
-                    PLAYER_X++;
+                    PLAYER_X += 1;
                 }
             } else { // middle third
                 // If we are standing on solid ground, jump
@@ -91,14 +91,10 @@ function play_game() { // 1/25th of a second
 
     // Are we jumping or falling?
     if (PLAYER_JUMP > 0) { // Jumping
-        if (frameCount % 3 == 0) {
-            PLAYER_Y--;
-            PLAYER_JUMP--;
-        }
+        PLAYER_Y -= 1;
+        PLAYER_JUMP -= 1;
     } else if (PLAYER_Y < BLOCKS_PER_LEVEL_H && LEVEL[PLAYER_Y][PLAYER_X] != "#") { // Falling
-        if (frameCount % 2 == 0) {
-            PLAYER_Y++;
-        }
+        PLAYER_Y += 1;
     }
     // Draw scene
     image(BACKGROUND, 0,0);
