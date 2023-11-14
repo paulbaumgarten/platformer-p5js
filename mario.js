@@ -9,7 +9,7 @@ Background img: 1366 x 768
 let BACKGROUND, FONT
 let P_STILL, P_LEFT, P_RIGHT;
 let BOX, COIN, OUCH;
-let LEVEL;
+let LEVEL = [];
 // Screen viewing variables
 const DEBUG = true;
 const PLAYER_OFFSET_X = 3;         // Left edge of view port relative to player
@@ -30,6 +30,7 @@ let PLAYER_Y = 13;                  // Block location of the player - y
 let PLAYER_ACTION = 0; // 0 = still, +1 = left, +2 = right, +4 = jump
 let PLAYER_JUMP = 0;
 let POINTS = 0;
+let PART_X = 0;
 
 function preload() { // Load all the media files
     BACKGROUND = loadImage('assets/items/bg_grasslands.png');
@@ -44,7 +45,7 @@ function preload() { // Load all the media files
 }
 
 function setup() {
-    frameRate(10);
+    frameRate(25);
     createCanvas(windowWidth, windowHeight);
     BACKGROUND.resize((windowHeight/windowWidth)*768, windowHeight);
     // Update these global variables
@@ -52,6 +53,9 @@ function setup() {
     BLOCKS_PER_SCREEN_H = windowHeight/PIXELS_PER_BLOCK_H;
     SPRITE_X = (PLAYER_OFFSET_X+1)*PIXELS_PER_BLOCK_W - 0.5*PIXELS_PER_BLOCK_W - 0.5*P_STILL.width;
     SPRITE_Y = (PLAYER_OFFSET_Y+1)*PIXELS_PER_BLOCK_H - P_STILL.height;
+    for (let i=0; i<LEVEL.length; i++) {
+        LEVEL[i] = LEVEL[i].split("");
+    }
 
     console.log("Screen resolution is ",windowWidth,"x",windowHeight,".");
     console.log("Block size is ",PIXELS_PER_BLOCK_W,"x",PIXELS_PER_BLOCK_H,".");
@@ -75,16 +79,24 @@ function play_game() { // 1/25th of a second
             if (touches[i].x < windowWidth/3) { // left third
                 PLAYER_ACTION = 1;
                 if ((PLAYER_X > 0) && ((LEVEL[PLAYER_Y][PLAYER_X-1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X-1] != "W"))) {
-                    PLAYER_X -= 1;
+                    PART_X -= 0.2;
+                    if (PART_X <= -1) {
+                        PART_X = 0;
+                        PLAYER_X -= 1;
+                    }
                 }
             } else if (touches[i].x > windowWidth*2/3) { // right third
                 PLAYER_ACTION = 2;
                 if ((PLAYER_X < BLOCKS_PER_LEVEL_W) && ((LEVEL[PLAYER_Y][PLAYER_X+1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X+1] != "W"))) {
-                    PLAYER_X += 1;
+                    PART_X += 0.2;
+                    if (PART_X >= 1) {
+                        PART_X = 0;
+                        PLAYER_X += 1;
+                    }
                 }
             } else { // middle third
                 // If we are standing on solid ground, jump
-                if ((PLAYER_Y == BLOCKS_PER_LEVEL_H) || (LEVEL[PLAYER_Y+1][PLAYER_X] == "#")) {
+                if ((PLAYER_Y >= BLOCKS_PER_LEVEL_H-1) || (LEVEL[PLAYER_Y+1][PLAYER_X] == "#")) {
                     PLAYER_JUMP = 10;
                 }
             }    
@@ -104,6 +116,7 @@ function play_game() { // 1/25th of a second
         LEVEL[PLAYER_Y][PLAYER_X] = '.';
         POINTS += 10;
     } else if (PLAYER_Y>1 && LEVEL[PLAYER_Y-1][PLAYER_X] == 'o') {
+        console.log("COIN");
         LEVEL[PLAYER_Y-1][PLAYER_X] = '.';
         POINTS += 10;
     }
@@ -127,16 +140,16 @@ function play_game() { // 1/25th of a second
             //console.log("Drawing ".block," at ",x,y,(x-VIEW_X)*BLOCK_W, y*BLOCK_H)
             switch (block) {
                 case '#': 
-                    image(BOX, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(BOX, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case 'W': 
-                    image(BOX, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(BOX, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case 'o': 
-                    image(COIN, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(COIN, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case '|': 
-                    image(OUCH, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(OUCH, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
             }                    
         }
