@@ -42,7 +42,7 @@ function preload() { // Load all the media files
 }
 
 function setup() {
-    frameRate(25);
+    frameRate(12);
     createCanvas(windowWidth, windowHeight);
     BACKGROUND.resize((windowHeight/windowWidth)*768, windowHeight);
     // Update these global variables
