@@ -11,7 +11,8 @@ let P_STILL, P_LEFT, P_RIGHT;
 let BOX, COIN, OUCH;
 let LEVEL;
 // Screen viewing variables
-const PLAYER_OFFSET_X = 4;         // Left edge of view port relative to player
+const DEBUG = true;
+const PLAYER_OFFSET_X = 3;         // Left edge of view port relative to player
 const PLAYER_OFFSET_Y = 11;        // Top edge of view port relative to player
 const PIXELS_PER_BLOCK_W = 48;       // Pixel width per block
 const PIXELS_PER_BLOCK_H = 48;       // Pixel height per block
@@ -28,6 +29,7 @@ let PLAYER_X = 2;                   // Block location of the player - x
 let PLAYER_Y = 13;                  // Block location of the player - y
 let PLAYER_ACTION = 0; // 0 = still, +1 = left, +2 = right, +4 = jump
 let PLAYER_JUMP = 0;
+let POINTS = 0;
 
 function preload() { // Load all the media files
     BACKGROUND = loadImage('assets/items/bg_grasslands.png');
@@ -48,8 +50,8 @@ function setup() {
     // Update these global variables
     BLOCKS_PER_SCREEN_W = windowWidth/PIXELS_PER_BLOCK_W;
     BLOCKS_PER_SCREEN_H = windowHeight/PIXELS_PER_BLOCK_H;
-    SPRITE_X = PLAYER_OFFSET_X*PIXELS_PER_BLOCK_W - 0.5*PIXELS_PER_BLOCK_W - 0.5*P_STILL.width;
-    SPRITE_Y = PLAYER_OFFSET_Y*PIXELS_PER_BLOCK_H - P_STILL.height;
+    SPRITE_X = (PLAYER_OFFSET_X+1)*PIXELS_PER_BLOCK_W - 0.5*PIXELS_PER_BLOCK_W - 0.5*P_STILL.width;
+    SPRITE_Y = (PLAYER_OFFSET_Y+1)*PIXELS_PER_BLOCK_H - P_STILL.height;
 
     console.log("Screen resolution is ",windowWidth,"x",windowHeight,".");
     console.log("Block size is ",PIXELS_PER_BLOCK_W,"x",PIXELS_PER_BLOCK_H,".");
@@ -72,17 +74,17 @@ function play_game() { // 1/25th of a second
             //console.log("PLAYER_XY",PLAYER_X,PLAYER_Y);
             if (touches[i].x < windowWidth/3) { // left third
                 PLAYER_ACTION = 1;
-                if ((PLAYER_X-1 > 0) && ((LEVEL[PLAYER_Y-1][PLAYER_X-1] != "#") && (LEVEL[PLAYER_Y-1][PLAYER_X-1] != "W"))) {
-                    PLAYER_X += 1;
+                if ((PLAYER_X > 0) && ((LEVEL[PLAYER_Y][PLAYER_X-1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X-1] != "W"))) {
+                    PLAYER_X -= 1;
                 }
             } else if (touches[i].x > windowWidth*2/3) { // right third
                 PLAYER_ACTION = 2;
-                if ((PLAYER_X < BLOCKS_PER_LEVEL_W) && ((LEVEL[PLAYER_Y-1][PLAYER_X] != "#") && (LEVEL[PLAYER_Y-1][PLAYER_X] != "W"))) {
+                if ((PLAYER_X < BLOCKS_PER_LEVEL_W) && ((LEVEL[PLAYER_Y][PLAYER_X+1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X+1] != "W"))) {
                     PLAYER_X += 1;
                 }
             } else { // middle third
                 // If we are standing on solid ground, jump
-                if ((PLAYER_Y == BLOCKS_PER_LEVEL_H) || (LEVEL[PLAYER_Y][PLAYER_X] == "#")) {
+                if ((PLAYER_Y == BLOCKS_PER_LEVEL_H) || (LEVEL[PLAYER_Y+1][PLAYER_X] == "#")) {
                     PLAYER_JUMP = 10;
                 }
             }    
@@ -93,14 +95,26 @@ function play_game() { // 1/25th of a second
     if (PLAYER_JUMP > 0) { // Jumping
         PLAYER_Y -= 1;
         PLAYER_JUMP -= 1;
-    } else if (PLAYER_Y < BLOCKS_PER_LEVEL_H && LEVEL[PLAYER_Y][PLAYER_X] != "#") { // Falling
+    } else if (PLAYER_Y+1 < BLOCKS_PER_LEVEL_H && LEVEL[PLAYER_Y+1][PLAYER_X] != "#") { // Falling
         PLAYER_Y += 1;
     }
+
+    // Collect coins
+    if (LEVEL[PLAYER_Y][PLAYER_X] == 'o') {
+        LEVEL[PLAYER_Y][PLAYER_X] = '.';
+        POINTS += 10;
+    } else if (PLAYER_Y>1 && LEVEL[PLAYER_Y-1][PLAYER_X] == 'o') {
+        LEVEL[PLAYER_Y-1][PLAYER_X] = '.';
+        POINTS += 10;
+    }
+
     // Draw scene
     image(BACKGROUND, 0,0);
 
+    console.log("Current block: X ",PLAYER_X," Y ",PLAYER_Y," Value ",LEVEL[PLAYER_Y][PLAYER_X]);
+
     let left_edge_block = PLAYER_X - PLAYER_OFFSET_X;
-    let top_edge_block = PLAYER_Y - PLAYER_OFFSET_Y 
+    let top_edge_block = PLAYER_Y - PLAYER_OFFSET_Y; 
     // Iterate over all the blocks in the view port
     for (let y=0; y<BLOCKS_PER_SCREEN_H; y++) {
         for (let x=0; x<BLOCKS_PER_SCREEN_W; x++) {
@@ -135,6 +149,14 @@ function play_game() { // 1/25th of a second
         image(P_RIGHT, SPRITE_X, SPRITE_Y);
     } else {
         image(P_STILL, SPRITE_X, SPRITE_Y);
+    }
+
+    // Highlight the hot spot block
+    if (DEBUG) {
+        noFill();
+        strokeWeight(4);
+        stroke('red');
+        rect(PLAYER_OFFSET_X*PIXELS_PER_BLOCK_W, PLAYER_OFFSET_Y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);    
     }
 }
 
