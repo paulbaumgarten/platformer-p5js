@@ -190,6 +190,9 @@ function keyPressed() {
 }
 
 function mousePressed() {
+    if (! PLAYING) {
+        PLAYING = true;
+    }
     if (touches) { console.log(touches); } else { console.log('no touch');}
     console.log("mouseXY",mouseX,mouseY);
     // If the game has not yet started
@@ -209,8 +212,5 @@ function draw() { // main game loop
         play_game();
     } else {
         intro_screen();
-        if (mousePressed) {
-            PLAYING = true;
-        }
     }
 }
