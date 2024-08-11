@@ -11,11 +11,11 @@ let P_STILL, P_LEFT, P_RIGHT;
 let BOX, COIN, OUCH;
 let LEVEL = [];
 // Screen viewing variables
-const DEBUG = true;
+const DEBUG = false;
 const PLAYER_OFFSET_X = 3;         // Left edge of view port relative to player
 const PLAYER_OFFSET_Y = 11;        // Top edge of view port relative to player
-const PIXELS_PER_BLOCK_W = 48;       // Pixel width per block
-const PIXELS_PER_BLOCK_H = 48;       // Pixel height per block
+const PIXELS_PER_BLOCK_W = 24;       // Pixel width per block
+const PIXELS_PER_BLOCK_H = 24;       // Pixel height per block
 const BLOCKS_PER_LEVEL_H = 41;    // Number of blocks in the level - height
 const BLOCKS_PER_LEVEL_W = 162;   // Number of blocks in the level - width
 // Update once we know the screen dimensions
@@ -27,11 +27,10 @@ let SPRITE_X = -1;                  // Pixel location to draw the player sprite 
 let SPRITE_Y = -1;                  // Pixel location to draw the player sprite - y
 let PLAYER_X = 2;                   // Block location of the player - x
 let PLAYER_Y = 13;                  // Block location of the player - y
-let PLAYER_ACTION = 0; // 0 = still, +1 = left, +2 = right, +4 = jump
+let USE_SPRITE = 0; // 0 = still, +1 = left, +2 = right, +4 = jump
 let PLAYER_JUMP = 0;
 let POINTS = 0;
 let HEALTH = 3;
-let PART_X = 0;
 
 function preload() { // Load all the media files
     BACKGROUND = loadImage('assets/items/bg_grasslands.png');
@@ -42,11 +41,12 @@ function preload() { // Load all the media files
     P_STILL = loadImage("assets/player/p1_stand.png")
     P_LEFT = loadImage("assets/player/p1_walk.gif")
     P_RIGHT = loadImage("assets/player/p1_walk.gif")
+    P_JUMP = loadImage("assets/player/p1_jump.png")
     LEVEL = loadStrings("levels.txt");
 }
 
 function setup() {
-    frameRate(25);
+    frameRate(15);
     createCanvas(windowWidth, windowHeight);
     BACKGROUND.resize((windowHeight/windowWidth)*768, windowHeight);
     // Update these global variables
@@ -71,38 +71,56 @@ function is_collision(im1,x1,y1, im2,x2,y2) {
     }
 }
 
+function doLeft() {
+    console.log("doLeft");
+    if ((PLAYER_X > 0) && ((LEVEL[PLAYER_Y][PLAYER_X-1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X-1] != "W"))) {
+        PLAYER_X -= 1;
+        USE_SPRITE = 1;
+    }
+}
+
+function doRight() {
+    console.log("doRight");
+    if ((PLAYER_X < BLOCKS_PER_LEVEL_W) && ((LEVEL[PLAYER_Y][PLAYER_X+1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X+1] != "W"))) {
+        PLAYER_X += 1;
+        USE_SPRITE = 2;
+    }
+}
+
+function doJump() {
+    // If we are standing on solid ground, jump
+    console.log("doJump");
+    if ((PLAYER_Y >= BLOCKS_PER_LEVEL_H-1) || (LEVEL[PLAYER_Y+1][PLAYER_X] == "#")) {
+        PLAYER_JUMP = 7;
+        USE_SPRITE = 4;
+    }
+}
+
 function play_game() { // 1/25th of a second
     // Respond to player input
+    USE_SPRITE = 0;
     if (mousePressed) {
-        PLAYER_ACTION = 0; // default, do nothing
         for (let i=0; i<touches.length; i++) {
             //console.log("PLAYER_XY",PLAYER_X,PLAYER_Y);
             if (touches[i].x < windowWidth/3) { // left third
-                PLAYER_ACTION = 1;
-                if ((PLAYER_X > 0) && ((LEVEL[PLAYER_Y][PLAYER_X-1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X-1] != "W"))) {
-                    PART_X -= 0.2;
-                    if (PART_X <= -1) {
-                        PART_X = 0;
-                        PLAYER_X -= 1;
-                    }
-                }
+                doLeft();
             } else if (touches[i].x > windowWidth*2/3) { // right third
-                PLAYER_ACTION = 2;
-                if ((PLAYER_X < BLOCKS_PER_LEVEL_W) && ((LEVEL[PLAYER_Y][PLAYER_X+1] != "#") && (LEVEL[PLAYER_Y][PLAYER_X+1] != "W"))) {
-                    PART_X += 0.2;
-                    if (PART_X >= 1) {
-                        PART_X = 0;
-                        PLAYER_X += 1;
-                    }
-                }
+                doRight();
             } else { // middle third
-                // If we are standing on solid ground, jump
-                if ((PLAYER_Y >= BLOCKS_PER_LEVEL_H-1) || (LEVEL[PLAYER_Y+1][PLAYER_X] == "#")) {
-                    PLAYER_JUMP = 10;
-                }
+                doJump();
             }    
         }
     }
+
+    if (keyIsDown(65)) { // a
+        doLeft();
+    } 
+    if (keyIsDown(68)) { // d
+        doRight();
+    } 
+    if (keyIsDown(87)) { // w 
+        doJump();
+    }    
 
     // Are we jumping or falling?
     if (PLAYER_JUMP > 0) { // Jumping
@@ -147,45 +165,38 @@ function play_game() { // 1/25th of a second
             //console.log("Drawing ".block," at ",x,y,(x-VIEW_X)*BLOCK_W, y*BLOCK_H)
             switch (block) {
                 case '#': 
-                    image(BOX, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(BOX, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case 'W': 
-                    image(BOX, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(BOX, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case 'o': 
-                    image(COIN, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(COIN, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
                 case '|': 
-                    image(OUCH, (x-PART_X)*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
+                    image(OUCH, x*PIXELS_PER_BLOCK_W, y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);
                     break;
             }                    
         }
     }
 
     // Player sprite
-    if (PLAYER_ACTION % 10 == 1) { // left
+    if (PLAYER_JUMP > 0) {
+        image(P_JUMP, SPRITE_X, SPRITE_Y);
+    } else if (USE_SPRITE==1) {
         image(P_LEFT, SPRITE_X, SPRITE_Y);
-    } else if (PLAYER_ACTION % 10 == 2) { // right
+    } else if (USE_SPRITE==2) {
         image(P_RIGHT, SPRITE_X, SPRITE_Y);
     } else {
         image(P_STILL, SPRITE_X, SPRITE_Y);
     }
-
+    
     // Highlight the hot spot block
     if (DEBUG) {
         noFill();
         strokeWeight(4);
         stroke('red');
         rect(PLAYER_OFFSET_X*PIXELS_PER_BLOCK_W, PLAYER_OFFSET_Y*PIXELS_PER_BLOCK_H, PIXELS_PER_BLOCK_W, PIXELS_PER_BLOCK_H);    
-    }
-}
-
-function keyPressed() {
-    switch (keyCode) {
-        case (UP_ARROW): PLAYER_Y--; break;
-        case (DOWN_ARROW): PLAYER_Y++; break;
-        case (LEFT_ARROW): PLAYER_X--; break;
-        case (RIGHT_ARROW): PLAYER_X++; break;
     }
 }
 
